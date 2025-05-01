@@ -6,6 +6,7 @@ from urllib.parse import urljoin, urlparse
 import time
 import json
 import re
+from collections import deque
 
 BASE_URL = "https://lighthousesouthbay.org"
 visited = set()
@@ -21,28 +22,37 @@ def get_links(soup, base_url):
         if is_valid_url(full_url) and full_url.startswith(BASE_URL):
 
             # Remove all image file URLs
-            if re.match(r"^\S*\.(gif|png|jpg|jpeg)$", full_url):
+            if re.search(r"wp-content/uploads", full_url):
+                print("wp-content ran")
+                continue
+            if re.match(r"^\S*\.(gif|png|jpg|jpeg|mp3)$", full_url):
+                print(".jpg ran")
                 continue
             links.add(full_url.split("#")[0])  # remove #fragment
     return links
 
 def clean_text(soup):
+
+    # remove the following tags from text
     for tag in soup(["nav", "footer", "script", "style", "header"]):
         tag.decompose()
-    header = soup.div["data-elementor-type"]
-    header.decompose()
+
+    # Remove the full header on site
+    header = soup.find("div", attrs={"data-elementor-type": "header"})
+    if header:
+        header.decompose()
     text = soup.get_text(separator="\n", strip=True)
     return text
 
-def crawl(url, max_pages=100):
-    to_visit = [url]
+def crawl(url, max_pages=10):
+    to_visit = deque([url])
 
     with open("lighthouse_pages.json", "w", encoding="utf-8") as f:
         f.write("[\n")
         first = True
 
         while to_visit and len(visited) < max_pages:
-            current = to_visit.pop()
+            current = to_visit.popleft()
             if current in visited:
                 continue
             try:
