@@ -23,7 +23,6 @@ def get_links(soup, base_url):
 
             # Remove all image file URLs
             if re.search(r"wp-content/uploads", full_url):
-                print("wp-content ran")
                 continue
             if re.match(r"^\S*\.(gif|png|jpg|jpeg|mp3)$", full_url):
                 print(".jpg ran")
@@ -44,14 +43,14 @@ def clean_text(soup):
     text = soup.get_text(separator="\n", strip=True)
     return text
 
-def crawl(url, max_pages=10):
+def crawl(url):
     to_visit = deque([url])
 
     with open("lighthouse_pages.json", "w", encoding="utf-8") as f:
         f.write("[\n")
         first = True
 
-        while to_visit and len(visited) < max_pages:
+        while to_visit:
             current = to_visit.popleft()
             if current in visited:
                 continue
@@ -83,4 +82,4 @@ def crawl(url, max_pages=10):
         f.write("\n]\n")
 
 if __name__ == "__main__":
-    crawl(BASE_URL, max_pages=100)
+    crawl(BASE_URL)
