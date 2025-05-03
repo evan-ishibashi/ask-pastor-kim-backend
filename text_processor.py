@@ -2,35 +2,27 @@ import json
 import openai
 import tiktoken
 import hashlib
-import os
 import time
 from pathlib import Path
 from typing import List
-from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec
 from gdrive_helpers import authenticate_drive, download_file_from_drive, upload_file_to_drive
+from config import CHUNK_SIZE, EMBEDDING_MODEL, LIGHTHOUSE_PAGES
+from config import OPENAI_KEY, PINECONE_INDEX, EMBEDDED_METADATA_FILE
+from config import LIGHTHOUSE_FILE_ID, EMBEDDED_CHUNKS_FILE_ID, PINECONE_API_KEY
 
 
-load_dotenv()
-
-# Config
-CHUNK_SIZE = 500
-EMBEDDING_MODEL = "text-embedding-3-small"
-INPUT_FILE = "lighthouse_pages.json"
-EMBEDDED_METADATA_FILE = "embedded_chunks.json"
 DRY_RUN = False  # Toggle for safe testing
 
 #API Keys
-openai.api_key = os.environ.get("OPENAI_KEY")
-pinecone_env = os.environ.get("PINECONE_ENV")
-pinecone_index_name = os.environ.get("PINECONE_INDEX")
+openai.api_key = OPENAI_KEY
 
 # Initialize Pinecone
-pc = Pinecone(os.environ.get("PINECONE_KEY"))
-index = pc.Index(pinecone_index_name)
-if pinecone_index_name not in pc.list_indexes().names():
+pc = Pinecone(PINECONE_API_KEY)
+index = pc.Index(PINECONE_INDEX)
+if PINECONE_INDEX not in pc.list_indexes().names():
     pc.create_index(
-        name=pinecone_index_name,
+        name=PINECONE_INDEX,
         dimension=1536,
         metric='cosine',
         spec=ServerlessSpec(
@@ -97,17 +89,13 @@ def save_embedded_chunks(chunks):
 
 # Main function to embed new chunks and store embeddings
 def main():
-    drive = authenticate_drive()
-
-    # File IDs retrieved from .env
-    LIGHTHOUSE_FILE_ID = os.environ.get("LIGHTHOUSE_FILE_ID")
-    EMBEDDED_CHUNKS_FILE_ID = os.environ.get("EMBEDDED_CHUNKS_FILE_ID")
+    service = authenticate_drive()
 
     # Download latest versions before processing
-    download_file_from_drive(drive, LIGHTHOUSE_FILE_ID, "lighthouse_pages.json")
-    download_file_from_drive(drive, EMBEDDED_CHUNKS_FILE_ID, "embedded_chunks.json")
+    download_file_from_drive(service, LIGHTHOUSE_FILE_ID, "lighthouse_pages.json")
+    download_file_from_drive(service, EMBEDDED_CHUNKS_FILE_ID, "embedded_chunks.json")
 
-    with open(INPUT_FILE) as f:
+    with open(LIGHTHOUSE_PAGES) as f:
         pages = json.load(f)
 
     # Load existing chunks and hashes for deduplication
@@ -147,11 +135,11 @@ def main():
         print("\n🚧 Dry run enabled. No API calls will be made.")
         return
 
-    # Confirm before proceeding
-    confirm = input("\n⚠️ Proceed with embedding these chunks to Pinecone? (y/n): ").strip().lower()
-    if confirm != 'y':
-        print("❌ Aborted.")
-        return
+    # Confirm before proceeding - Removed for Cron Job
+    # confirm = input("\n⚠️ Proceed with embedding these chunks to Pinecone? (y/n): ").strip().lower()
+    # if confirm != 'y':
+    #     print("❌ Aborted.")
+    #     return
 
     all_metadata = []
 
@@ -185,7 +173,7 @@ def main():
     if all_metadata:
         existing_chunks.extend(all_metadata)
         save_embedded_chunks(existing_chunks)
-        upload_file_to_drive(drive, EMBEDDED_METADATA_FILE, EMBEDDED_CHUNKS_FILE_ID)
+        upload_file_to_drive(service, EMBEDDED_METADATA_FILE, EMBEDDED_CHUNKS_FILE_ID)
         print(f"\n✅ Successfully embedded {len(all_metadata)} new chunks to Pinecone.")
     else:
         print("\n⚠️ No new embeddings added.")

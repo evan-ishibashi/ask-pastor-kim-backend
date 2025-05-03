@@ -6,6 +6,9 @@ import json
 import re
 import os
 from collections import deque
+from gdrive_helpers import authenticate_drive, download_file_from_drive, upload_file_to_drive
+from config import LIGHTHOUSE_FILE_ID, LIGHTHOUSE_PAGES
+
 
 BASE_URL = "https://lighthousesouthbay.org"
 visited = set()
@@ -26,6 +29,18 @@ def get_links(soup, base_url):
             links.add(full_url.split("#")[0])
     return links
 
+def handle_first_page_true(current):
+    try:
+        print(f"Crawling: {current}")
+        res = requests.get(current, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        links = get_links(soup, current)
+        time.sleep(0.5)
+        return links
+    except Exception as e:
+        print(f"Error crawling {current}: {e}")
+
 def clean_text(soup):
     for tag in soup(["footer", "script", "style", "header"]):
         tag.decompose()
@@ -35,6 +50,7 @@ def clean_text(soup):
     return soup.get_text(separator="\n", strip=True)
 
 def load_existing_data(filename):
+    """Loads existing data, returns data, existing urls (set)"""
     if not os.path.exists(filename):
         return [], set()
     with open(filename, "r", encoding="utf-8") as f:
@@ -49,18 +65,22 @@ def load_existing_data(filename):
 def crawl(url):
     to_visit = deque([url])
 
-    # Load existing pages if available
-    try:
-        with open("lighthouse_pages.json", "r", encoding="utf-8") as f:
-            existing_data = json.load(f)
-    except FileNotFoundError:
-        existing_data = []
+    service = authenticate_drive()
 
-    visited_urls = set(page["url"] for page in existing_data)
+    download_file_from_drive(service, LIGHTHOUSE_FILE_ID, LIGHTHOUSE_PAGES)
+
+    # Load existing pages if available
+    existing_data, visited_urls = load_existing_data(LIGHTHOUSE_PAGES)
     new_data = []
+    first = True
 
     while to_visit:
         current = to_visit.popleft()
+
+        if first:
+            to_visit.extend(handle_first_page_true(current)-visited-visited_urls)
+            first = False
+
         if current in visited or current in visited_urls:
             continue
         try:
@@ -86,10 +106,14 @@ def crawl(url):
             print(f"Error crawling {current}: {e}")
 
     # Save combined data
-    with open("lighthouse_pages.json", "w", encoding="utf-8") as f:
+    with open(LIGHTHOUSE_PAGES, "w", encoding="utf-8") as f:
         json.dump(existing_data + new_data, f, indent=2, ensure_ascii=False)
 
     print(f"\n✅ Added {len(new_data)} new pages.")
+
+    if len(new_data) > 0:
+        upload_file_to_drive(service, LIGHTHOUSE_PAGES, LIGHTHOUSE_FILE_ID)
+
 
 if __name__ == "__main__":
     crawl(BASE_URL)
