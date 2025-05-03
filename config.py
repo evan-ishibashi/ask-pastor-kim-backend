@@ -13,7 +13,7 @@ CHUNKS_FILE_ID = os.environ.get("EMBEDDED_CHUNKS_FILE_ID")
 
 #API Keys
 OPENAI_KEY = os.environ.get("OPENAI_KEY")
-PINECONE_API_KEY = os.environ.get("PINECONE_KEY")
+PINECONE_KEY = os.environ.get("PINECONE_KEY")
 
 #Pinecone
 PINECONE_ENV = os.environ.get("PINECONE_ENV")

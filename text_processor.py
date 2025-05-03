@@ -9,7 +9,7 @@ from pinecone import Pinecone, ServerlessSpec
 from gdrive_helpers import authenticate_drive, download_file_from_drive, upload_file_to_drive
 from config import CHUNK_SIZE, EMBEDDING_MODEL, LIGHTHOUSE_PAGES
 from config import OPENAI_KEY, PINECONE_INDEX, EMBEDDED_METADATA_FILE
-from config import LIGHTHOUSE_FILE_ID, EMBEDDED_CHUNKS_FILE_ID, PINECONE_API_KEY
+from config import LIGHTHOUSE_FILE_ID, EMBEDDED_CHUNKS_FILE_ID, PINECONE_KEY
 
 
 DRY_RUN = False  # Toggle for safe testing
@@ -18,7 +18,7 @@ DRY_RUN = False  # Toggle for safe testing
 openai.api_key = OPENAI_KEY
 
 # Initialize Pinecone
-pc = Pinecone(PINECONE_API_KEY)
+pc = Pinecone(PINECONE_KEY)
 index = pc.Index(PINECONE_INDEX)
 if PINECONE_INDEX not in pc.list_indexes().names():
     pc.create_index(

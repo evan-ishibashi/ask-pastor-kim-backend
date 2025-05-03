@@ -28,7 +28,19 @@ jobs:
 
       - name: Run scraper
         run: python scraper.py
+        env:
+          LIGHTHOUSE_FILE_ID: ${{ secrets.LIGHTHOUSE_FILE_ID }}
+          LIGHTHOUSE_PAGES: ${{ secrets.LIGHTHOUSE_PAGES }}
 
       - name: Run text processor
         run: python text_processor.py
+        env:
+          LIGHTHOUSE_FILE_ID: ${{ secrets.LIGHTHOUSE_FILE_ID }}
+          EMBEDDED_CHUNKS_FILE_ID: ${{ secrets.EMBEDDED_CHUNKS_FILE_ID }}
+          LIGHTHOUSE_PAGES: ${{ secrets.LIGHTHOUSE_PAGES }}
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          PINECONE_KEY: ${{ secrets.PINECONE_KEY }}
+          PINECONE_ENV: ${{ secrets.PINECONE_ENV }}
+          PINECONE_INDEX: ${{ secrets.PINECONE_INDEX }}
+          EMBEDDED_METADATA_FILE: ${{ secrets.EMBEDDED_METADATA_FILE }}
 
