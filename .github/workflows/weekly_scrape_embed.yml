@@ -28,8 +28,7 @@ jobs:
 
       - name: Run scraper
         run: python scraper.py
-        working-directory: backend
 
       - name: Run text processor
         run: python text_processor.py
-        working-directory: backend
+
