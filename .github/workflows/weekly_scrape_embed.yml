@@ -27,7 +27,9 @@ jobs:
           echo "${{ secrets.CREDENTIALS_JSON_B64 }}" | base64 --decode > credentials.json
 
       - name: Run scraper
-        run: python ask-pastor-kim/backend/scraper.py
+        run: python scraper.py
+        working-directory: backend
 
       - name: Run text processor
-        run: python ask-pastor-kim/backend/text_processor.py
+        run: python text_processor.py
+        working-directory: backend
