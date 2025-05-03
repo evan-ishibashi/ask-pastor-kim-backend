@@ -1,36 +1,35 @@
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+import io
 
-# Authenticate and initialize Google Drive
+
 def authenticate_drive():
-    gauth = GoogleAuth()
-    gauth.LoadCredentialsFile("mycreds.txt")
+    """Authenticate and return a Drive API client."""
+    SERVICE_ACCOUNT_FILE = 'service_account_key.json'
+    SCOPES = ['https://www.googleapis.com/auth/drive']
 
-    if gauth.credentials is None:
-        # Authenticate if they're not there
-        gauth.LocalWebserverAuth()
-    elif gauth.access_token_expired:
-        # Refresh them if expired
-        gauth.Refresh()
-    else:
-        # Initialize the saved creds
-        gauth.Authorize()
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 
-    # Save the current credentials to a file
-    gauth.SaveCredentialsFile("mycreds.txt")
+    return build('drive', 'v3', credentials=credentials)
 
-    return GoogleDrive(gauth)
 
-# Download a file from Google Drive by file ID
-def download_file_from_drive(drive, file_id, destination_path):
-    file = drive.CreateFile({'id': file_id})
-    file.FetchMetadata()
-    file.GetContentFile(destination_path)
-    print(f"✅ Downloaded: {destination_path}")
+def download_file_from_drive(service, file_id, destination_path):
+    """Download a file from Google Drive."""
+    request = service.files().get_media(fileId=file_id)
+    fh = io.FileIO(destination_path, 'wb')
+    downloader = MediaIoBaseDownload(fh, request)
 
-# Upload (or replace) a file to Google Drive by file ID
-def upload_file_to_drive(drive, local_path, file_id):
-    file = drive.CreateFile({'id': file_id})
-    file.SetContentFile(local_path)
-    file.Upload()
-    print(f"☁️ Uploaded: {local_path}")
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+        print(f"🔽 Download progress: {int(status.progress() * 100)}%")
+    print(f"✅ File downloaded to {destination_path}")
+
+
+def upload_file_to_drive(service, local_path, file_id, mime_type='application/json'):
+    """Update an existing file on Google Drive by overwriting it."""
+    media = MediaFileUpload(local_path, mimetype=mime_type)
+    updated_file = service.files().update(fileId=file_id, media_body=media).execute()
+    print(f"☁️ File uploaded: {updated_file.get('name')} (ID: {file_id})")
