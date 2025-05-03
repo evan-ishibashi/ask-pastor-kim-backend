@@ -1,14 +1,15 @@
 import json
-import faiss
 import openai
 import tiktoken
 import hashlib
-import numpy as np
 import os
 import time
 from pathlib import Path
 from typing import List
 from dotenv import load_dotenv
+from pinecone import Pinecone, ServerlessSpec
+from gdrive_helpers import authenticate_drive, download_file_from_drive, upload_file_to_drive
+
 
 load_dotenv()
 
@@ -17,10 +18,27 @@ CHUNK_SIZE = 500
 EMBEDDING_MODEL = "text-embedding-3-small"
 INPUT_FILE = "lighthouse_pages.json"
 EMBEDDED_METADATA_FILE = "embedded_chunks.json"
-FAISS_INDEX_FILE = "faiss_index.index"
 DRY_RUN = False  # Toggle for safe testing
 
+#API Keys
 openai.api_key = os.environ.get("OPENAI_KEY")
+pinecone_env = os.environ.get("PINECONE_ENV")
+pinecone_index_name = os.environ.get("PINECONE_INDEX")
+
+# Initialize Pinecone
+pc = Pinecone(os.environ.get("PINECONE_KEY"))
+index = pc.Index(pinecone_index_name)
+if pinecone_index_name not in pc.list_indexes().names():
+    pc.create_index(
+        name=pinecone_index_name,
+        dimension=1536,
+        metric='cosine',
+        spec=ServerlessSpec(
+            cloud='aws',
+            region='us-east-1'
+        )
+    )
+
 
 
 # Helper functions
@@ -77,18 +95,18 @@ def save_embedded_chunks(chunks):
     with open(EMBEDDED_METADATA_FILE, "w") as f:
         json.dump(chunks, f, indent=2)
 
-def load_or_create_faiss(dim):
-    """Load or create a FAISS index."""
-    if Path(FAISS_INDEX_FILE).exists():
-        return faiss.read_index(FAISS_INDEX_FILE)
-    return faiss.IndexFlatL2(dim)
-
-def save_faiss_index(index):
-    """Save the FAISS index to a file."""
-    faiss.write_index(index, FAISS_INDEX_FILE)
-
 # Main function to embed new chunks and store embeddings
 def main():
+    drive = authenticate_drive()
+
+    # File IDs retrieved from .env
+    LIGHTHOUSE_FILE_ID = os.environ.get("LIGHTHOUSE_FILE_ID")
+    EMBEDDED_CHUNKS_FILE_ID = os.environ.get("EMBEDDED_CHUNKS_FILE_ID")
+
+    # Download latest versions before processing
+    download_file_from_drive(drive, LIGHTHOUSE_FILE_ID, "lighthouse_pages.json")
+    download_file_from_drive(drive, EMBEDDED_CHUNKS_FILE_ID, "embedded_chunks.json")
+
     with open(INPUT_FILE) as f:
         pages = json.load(f)
 
@@ -130,55 +148,45 @@ def main():
         return
 
     # Confirm before proceeding
-    confirm = input("\n⚠️ Proceed with embedding these new chunks? (y/n): ").strip().lower()
+    confirm = input("\n⚠️ Proceed with embedding these chunks to Pinecone? (y/n): ").strip().lower()
     if confirm != 'y':
         print("❌ Aborted.")
         return
 
-    # Start embedding in batches
     all_metadata = []
+
     for batch in get_batches(new_chunks):
         texts = [chunk["text"] for chunk in batch]
         try:
-            # Call OpenAI API to get embeddings for the batch
-            response = openai.embeddings.create(
-                input=texts,
-                model=EMBEDDING_MODEL
-            )
+            response = openai.embeddings.create(input=texts, model=EMBEDDING_MODEL)
             vectors = [e.embedding for e in response.data]
 
-            # Prepare metadata and add to the list
+            pinecone_data = []
             for chunk, vector in zip(batch, vectors):
-                metadata = {
+                pinecone_data.append((
+                    chunk["hash"],  # unique ID
+                    vector,
+                    {"url": chunk["url"], "text": chunk["text"]}
+                ))
+                all_metadata.append({
                     "hash": chunk["hash"],
                     "url": chunk["url"],
-                    "content": chunk["text"],
-                    "embedding": vector  # optional: remove if storing separately
-                }
-                all_metadata.append(metadata)
+                    "text": chunk["text"],
+                    "tokens": chunk["tokens"]
+                })
 
-            # Sleep to avoid rate-limiting
-            time.sleep(1)  # Polite delay between batches
+            index.upsert(vectors=pinecone_data,namespace="ns1")
+
+            time.sleep(1)  # Be polite to OpenAI API
         except Exception as e:
-            print(f"Error embedding batch: {e}")
-            time.sleep(5)  # Optional backoff after error
+            print(f"⚠️ Error embedding batch: {e}")
+            time.sleep(5)
 
-    # If embeddings were successful, add them to FAISS and save
     if all_metadata:
-        # Ensure FAISS index is loaded/created
-        dim = len(all_metadata[0]["embedding"])
-        index = load_or_create_faiss(dim)
-        embeddings = [m["embedding"] for m in all_metadata]
-        index.add(np.array(embeddings).astype("float32"))
-
-        # Save the new FAISS index
-        save_faiss_index(index)
-
-        # Save the new metadata
         existing_chunks.extend(all_metadata)
         save_embedded_chunks(existing_chunks)
-
-        print(f"\n✅ Embedded {len(embeddings)} new chunks and saved metadata.")
+        upload_file_to_drive(drive, EMBEDDED_METADATA_FILE, EMBEDDED_CHUNKS_FILE_ID)
+        print(f"\n✅ Successfully embedded {len(all_metadata)} new chunks to Pinecone.")
     else:
         print("\n⚠️ No new embeddings added.")
 
