@@ -24,10 +24,10 @@ def load_chunks(file_path):
 
 def main():
     print("🔐 Authenticating Google Drive...")
-    drive = authenticate_drive()
+    service = authenticate_drive()
 
     print(f"📥 Downloading {CHUNKS_FILE} from Google Drive...")
-    download_file_from_drive(drive, CHUNKS_FILE_ID, CHUNKS_FILE)
+    download_file_from_drive(service, CHUNKS_FILE_ID, CHUNKS_FILE)
 
     print("🚀 Initializing Pinecone...")
     pc = Pinecone(PINECONE_API_KEY)
