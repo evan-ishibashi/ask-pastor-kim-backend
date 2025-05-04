@@ -6,8 +6,8 @@ import json
 import re
 import os
 from collections import deque
-from gdrive_helpers import authenticate_drive, download_file_from_drive, upload_file_to_drive
-from config import LIGHTHOUSE_FILE_ID, LIGHTHOUSE_PAGES
+from app.utils.gdrive_helpers import authenticate_drive, download_file_from_drive, upload_file_to_drive
+from app.config import LIGHTHOUSE_FILE_ID, LIGHTHOUSE_PAGES
 
 
 BASE_URL = "https://lighthousesouthbay.org"

@@ -6,10 +6,10 @@ import time
 from pathlib import Path
 from typing import List
 from pinecone import Pinecone, ServerlessSpec
-from gdrive_helpers import authenticate_drive, download_file_from_drive, upload_file_to_drive
-from config import CHUNK_SIZE, EMBEDDING_MODEL, LIGHTHOUSE_PAGES
-from config import OPENAI_KEY, PINECONE_INDEX, EMBEDDED_METADATA_FILE
-from config import LIGHTHOUSE_FILE_ID, EMBEDDED_CHUNKS_FILE_ID, PINECONE_KEY
+from app.utils.gdrive_helpers import authenticate_drive, download_file_from_drive, upload_file_to_drive
+from app.config import CHUNK_SIZE, EMBEDDING_MODEL, LIGHTHOUSE_PAGES
+from app.config import OPENAI_KEY, PINECONE_INDEX, EMBEDDED_METADATA_FILE
+from app.config import LIGHTHOUSE_FILE_ID, EMBEDDED_CHUNKS_FILE_ID, PINECONE_KEY
 
 
 DRY_RUN = False  # Toggle for safe testing

@@ -1,9 +1,9 @@
 import json
 from pinecone import Pinecone, ServerlessSpec
-from gdrive_helpers import authenticate_drive, download_file_from_drive
+from app.utils.gdrive_helpers import authenticate_drive, download_file_from_drive
 import os
 from dotenv import load_dotenv
-from pinecone_helpers import batch_upload
+from app.utils.pinecone_helpers import batch_upload
 
 load_dotenv()
 

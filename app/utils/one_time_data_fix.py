@@ -1,5 +1,5 @@
 import json
-from gdrive_helpers import authenticate_drive, download_file_from_drive, upload_file_to_drive
+from app.utils.gdrive_helpers import authenticate_drive, download_file_from_drive, upload_file_to_drive
 import os
 from dotenv import load_dotenv
 
