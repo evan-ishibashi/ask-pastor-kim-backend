@@ -74,7 +74,6 @@ async def ask_question(req: QuestionRequest):
                 "content": match.metadata.get("text", "")
             }
             for match in pinecone_response.matches
-            if match.score > 0.5
         ]
 
         # Step 4: Send prompt to OpenAI Chat API
