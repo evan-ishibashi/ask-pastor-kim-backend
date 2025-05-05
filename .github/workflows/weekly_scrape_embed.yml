@@ -29,7 +29,7 @@ jobs:
       - name: Run scraper
         run: |
           export PYTHONPATH="${{ github.workspace }}"
-          python scraper.py
+          python app/scraper.py
         env:
           LIGHTHOUSE_FILE_ID: ${{ secrets.LIGHTHOUSE_FILE_ID }}
           LIGHTHOUSE_PAGES: ${{ secrets.LIGHTHOUSE_PAGES }}
@@ -37,7 +37,7 @@ jobs:
       - name: Run text processor
         run: |
           export PYTHONPATH="${{ github.workspace }}"
-          python text_processor.py
+          python app/text_processor.py
         env:
           LIGHTHOUSE_FILE_ID: ${{ secrets.LIGHTHOUSE_FILE_ID }}
           EMBEDDED_CHUNKS_FILE_ID: ${{ secrets.EMBEDDED_CHUNKS_FILE_ID }}
