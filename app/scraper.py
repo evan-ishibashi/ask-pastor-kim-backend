@@ -118,3 +118,4 @@ def crawl(url):
 if __name__ == "__main__":
     crawl(BASE_URL)
     crawl(BASE_URL + "/our-resources/")
+    crawl(BASE_URL + "/resources/stories/meet-our-staff-leighton-okada/")
